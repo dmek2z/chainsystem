@@ -11,7 +11,7 @@ export interface Product {
   outboundDate: string | null
   weight: number
   manufacturer: string
-  floor?: number // 층 정보 추가
+  floor?: number
 }
 
 export interface Rack {
@@ -40,6 +40,8 @@ export interface Category {
 }
 
 interface StorageContextType {
+  products: Product[]
+  setProducts: React.Dispatch<React.SetStateAction<Product[]>>
   racks: Rack[]
   setRacks: React.Dispatch<React.SetStateAction<Rack[]>>
   productCodes: ProductCode[]
@@ -53,33 +55,66 @@ interface StorageContextType {
 
 const StorageContext = createContext<StorageContextType | undefined>(undefined)
 
-export function StorageProvider({ children }) {
-  const [products, setProducts] = useState([]);
-  const [racks, setRacks] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [users, setUsers] = useState([]);
+interface StorageProviderProps {
+  children: React.ReactNode
+}
+
+export function StorageProvider({ children }: StorageProviderProps) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [racks, setRacks] = useState<Rack[]>([]);
+  const [productCodes, setProductCodes] = useState<ProductCode[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadAll() {
-      setIsLoading(true);
-      const [productsData, racksData, categoriesData, usersData] = await Promise.all([
-        fetchProducts(),
-        fetchRacks(),
-        fetchCategories(),
-        fetchUsers(),
-      ]);
-      setProducts(productsData);
-      setRacks(racksData);
-      setCategories(categoriesData);
-      setUsers(usersData);
-      setIsLoading(false);
+      try {
+        setIsLoading(true);
+        const [productsData, racksData, categoriesData, usersData] = await Promise.all([
+          fetchProducts().catch(() => []),
+          fetchRacks().catch(() => []),
+          fetchCategories().catch(() => []),
+          fetchUsers().catch(() => []),
+        ]);
+
+        // 데이터 유효성 검사 및 기본값 설정
+        setProducts(Array.isArray(productsData) ? productsData : []);
+        setRacks(Array.isArray(racksData) ? racksData : []);
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+        setUsers(Array.isArray(usersData) ? usersData : []);
+        
+        // productCodes는 초기에 빈 배열로 설정
+        setProductCodes([]);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        // 에러 발생 시 모든 상태를 빈 배열로 초기화
+        setProducts([]);
+        setRacks([]);
+        setCategories([]);
+        setUsers([]);
+        setProductCodes([]);
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadAll();
   }, []);
 
   return (
-    <StorageContext.Provider value={{ products, setProducts, racks, setRacks, categories, setCategories, users, setUsers, isLoading }}>
+    <StorageContext.Provider value={{ 
+      products, 
+      setProducts, 
+      racks, 
+      setRacks, 
+      productCodes, 
+      setProductCodes, 
+      categories, 
+      setCategories, 
+      users, 
+      setUsers, 
+      isLoading 
+    }}>
       {children}
     </StorageContext.Provider>
   );

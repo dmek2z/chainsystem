@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 "use client"
 
 import type React from "react"
@@ -38,7 +40,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function ProductCodesPage() {
-  const { productCodes, setProductCodes, categories, setCategories, isLoading } = useStorage()
+  const { productCodes = [], setProductCodes, categories = [], setCategories, isLoading } = useStorage()
   const [searchQuery, setSearchQuery] = useState("")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
@@ -71,15 +73,18 @@ export default function ProductCodesPage() {
   const [formDescription, setFormDescription] = useState("")
   const [formCategory, setFormCategory] = useState("")
 
-  // 필터링된 품목 코드
-  const filteredProductCodes = productCodes.filter((product) => {
-    return (
-      product.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })
+  // 필터링된 품목 코드 - 안전한 필터링을 위해 기본값 설정
+  const filteredProductCodes = Array.isArray(productCodes) 
+    ? productCodes.filter((product) => {
+        if (!product) return false;
+        return (
+          (product.code?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+          (product.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+          (product.description?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+          (product.category?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+        )
+      })
+    : [];
 
   // 전체 선택 상태 업데이트
   useEffect(() => {
