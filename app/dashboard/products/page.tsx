@@ -1,6 +1,6 @@
-export const dynamic = 'force-dynamic'
-
 "use client"
+
+export const dynamic = 'force-dynamic'
 
 import type React from "react"
 
@@ -528,7 +528,7 @@ export default function ProductCodesPage() {
                       <TableCell>
                         <Checkbox
                           checked={selectedItems.has(product.id)}
-                          onCheckedChange={(checked) => handleSelectItem(product.id, checked === true)}
+                          onCheckedChange={(checked: boolean | "indeterminate") => handleSelectItem(product.id, checked === true)}
                         />
                       </TableCell>
                       <TableCell className="font-medium">{product.code}</TableCell>
