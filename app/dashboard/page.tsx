@@ -1,21 +1,22 @@
 "use client"
 
+export const dynamic = 'force-dynamic'
+
 import { useEffect, useState } from "react"
 import { CheckCircle, Grid3x3, Package, ShoppingBag, XCircle } from "lucide-react"
-import dynamic from "next/dynamic"
+import nextDynamic from "next/dynamic"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "@/components/ui/chart"
 import { useStorage } from "@/contexts/storage-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { supabase } from '@/lib/supabaseClient'
-import { fetchProducts } from '@/lib/api'
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82ca9d"]
-const ChartPieClient = dynamic(() => import("@/components/ChartPieClient"), { ssr: false })
+const ChartPieClient = nextDynamic(() => import("@/components/ChartPieClient"), { ssr: false })
 
 export default function DashboardPage() {
-  const { products, racks, categories, users, isLoading } = useStorage()
+  const { products, racks, categories, users, isLoading, productCodes } = useStorage()
   const [storageDistributionData, setStorageDistributionData] = useState<any[]>([])
   const [recentActivity, setRecentActivity] = useState<any[]>([])
 
@@ -30,18 +31,22 @@ export default function DashboardPage() {
       categoryFloorCount[category.name] = 0
     })
 
-    // 제품 코드를 카테고리에 매핑하는 맵 생성
+    // 제품 코드를 카테고리에 매핑하는 맵 생성 (productCodes 사용)
     const productCodeToCategoryMap: Record<string, string> = {}
-    products.forEach((pc) => {
-      productCodeToCategoryMap[pc.code] = pc.category
-    })
+    if (Array.isArray(productCodes)) {
+      productCodes.forEach((pc) => {
+        productCodeToCategoryMap[pc.code] = pc.category
+      })
+    }
 
     // 코드 접두사를 카테고리에 매핑하는 맵 생성 (fallback용)
     const prefixToCategoryMap: Record<string, string> = {}
-    products.forEach((pc) => {
-      const prefix = pc.code.split("-")[0]
-      prefixToCategoryMap[prefix] = pc.category
-    })
+    if (Array.isArray(productCodes)) {
+      productCodes.forEach((pc) => {
+        const prefix = pc.code.split("-")[0]
+        prefixToCategoryMap[prefix] = pc.category
+      })
+    }
 
     // 각 랙에서 제품 카테고리별 층 수 계산
     racks.forEach((rack) => {
@@ -174,11 +179,7 @@ export default function DashboardPage() {
     }
 
     setRecentActivity(activities)
-  }, [racks, products, categories, isLoading])
-
-  useEffect(() => {
-    fetchProducts().then(setProducts);
-  }, []);
+  }, [racks, products, categories, isLoading, productCodes])
 
   if (isLoading) {
     return <DashboardSkeleton />
@@ -188,7 +189,8 @@ export default function DashboardPage() {
   const totalRacks = racks.length
   const usedRacks = racks.filter((rack) => rack.products.length > 0).length
   const emptyRacks = totalRacks - usedRacks
-  const uniqueCategories = new Set(products.map((p) => p.category)).size
+  // 고유 품목 카테고리 계산 (productCodes 기준)
+  const uniqueCategories = Array.isArray(productCodes) ? new Set(productCodes.map((p) => p.category)).size : 0
 
   return (
     <div className="space-y-6">
@@ -374,16 +376,4 @@ function DashboardSkeleton() {
       </div>
     </div>
   )
-}
-
-export async function fetchProducts() {
-  const { data, error } = await supabase.from('products').select('*');
-  if (error) throw error;
-  return data;
-}
-
-export async function addProduct(product) {
-  const { data, error } = await supabase.from('products').insert([product]);
-  if (error) throw error;
-  return data;
 }
